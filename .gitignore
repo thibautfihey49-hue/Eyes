@@ -1,0 +1,7 @@
+# Fichiers système
+.DS_Store
+Thumbs.db
+
+# Éventuels fichiers de développement
+*.log
+node_modules/

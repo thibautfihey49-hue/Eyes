@@ -1,0 +1,28 @@
+{
+  "name": "👁️ EYES — Caméra P2P",
+  "short_name": "EYES",
+  "description": "Visionneuse caméra P2P directe — sans serveur intermédiaire",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2917/2917490.png",
+      "sizes": "any",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "tools"],
+  "shortcuts": [
+    {
+      "name": "Mode Caméra",
+      "short_name": "Caméra",
+      "url": "./index.html",
+      "icons": [{"src": "https://cdn-icons-png.flaticon.com/512/2917/2917490.png", "sizes": "96x96"}]
+    }
+  ]
+}

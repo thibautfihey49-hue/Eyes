@@ -1,0 +1,53 @@
+name: Build APK
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Configurer JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Rendre gradlew exécutable
+        run: chmod +x gradlew
+
+      - name: Compiler l'APK
+        run: ./gradlew assembleDebug
+
+      - name: Télécharger l'APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: EYES-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Créer une Release automatique
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: v1.0.0
+          name: EYES APK v1.0.0
+          body: |
+            # 👁️ EYES — Caméra P2P (Service en arrière-plan)
+            
+            ✅ **Service permanent** — tourne même si tu fermes l'appli
+            ✅ **Démarrage auto** — se lance au démarrage du téléphone
+            ✅ **Verrouillage veille** — reste toujours connecté
+            ✅ **Autorisation unique** — une fois accordé, plus de demande
+            
+            ## 📲 Installation
+            1. Télécharge `app-debug.apk` ci-dessous
+            2. Installe-le sur ton téléphone
+            3. Ouvre → Autorise la caméra → Clique "ACTIVER EYES"
+            4. ✅ Ferme l'appli — ça continue de tourner !
+          files: app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

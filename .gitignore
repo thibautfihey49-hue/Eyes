@@ -1,7 +1,8 @@
-# Fichiers système
+*.iml
+.gradle
+/build/
+/captures/
+.externalNativeBuild
+.cxx
+local.properties
 .DS_Store
-Thumbs.db
-
-# Éventuels fichiers de développement
-*.log
-node_modules/

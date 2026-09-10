@@ -11,15 +11,22 @@ class MainActivity : AppCompatActivity() {
         
         val layout = LinearLayout(this)
         layout.orientation = LinearLayout.VERTICAL
-        layout.setPadding(50, 100, 50, 50)
+        layout.setPadding(50, 150, 50, 50)
         layout.setBackgroundColor(0xFF121212.toInt())
         
-        val text = TextView(this)
-        text.text = "✅ EYES FONCTIONNE !"
-        text.textSize = 24f
-        text.setTextColor(0xFFFFFFFF.toInt())
+        val titre = TextView(this)
+        titre.text = "✅ EYES — INSTALLATION RÉUSSIE !"
+        titre.textSize = 22f
+        titre.setTextColor(0xFF4CAF50.toInt())
+        titre.setPadding(0, 0, 0, 40)
+        layout.addView(titre)
         
-        layout.addView(text)
+        val info = TextView(this)
+        info.text = "Tout est en ordre ✅\n\nFichiers présents :\n• MainActivity.kt ✅\n• AndroidManifest.xml ✅\n• Ressources ✅\n• Autorisations ✅\n\nPrêt pour les prochaines fonctionnalités !"
+        info.textSize = 16f
+        info.setTextColor(0xFFFFFFFF.toInt())
+        layout.addView(info)
+        
         setContentView(layout)
     }
 }
